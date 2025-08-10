@@ -36,7 +36,7 @@
      - 🔉 音量调节  
      - 🖥️ 全屏模式  
    ![示例截图](https://github.com/nkfff55/oponalist_web/blob/main/%E6%88%AA%E5%9B%BE/Snipaste_2025-08-10_10-38-04.png)
-
+   ![示例截图](https://github.com/nkfff55/oponalist_web/blob/main/%E6%88%AA%E5%9B%BE/Snipaste_2025-08-10_09-50-30.png)
 ---
 
 ## 🚀 进阶优化：补帧提升观感
