@@ -9,19 +9,48 @@
 - 🎨 **自适应界面**：手机/电脑都能流畅使用  
 - 🔄 **即装即用**：静态页面直开  
 
-**试试看？**
-安装alist和挂载存储省略，alist或者openalist应该都是没有问题的。
-1.打开游客访问权限
-![image](https://github.com/nkfff55/oponalist_web/blob/main/%E6%88%AA%E5%9B%BE/Snipaste_2025-08-10_09-45-58.png)
-2.文件夹名称，后面要使用
-![image](https://github.com/nkfff55/oponalist_web/blob/main/%E6%88%AA%E5%9B%BE/Snipaste_2025-08-10_09-46-43.png)
-3.修改index.html中的网址和文件目录(就是上面的文件夹名称)
-![image](https://github.com/nkfff55/oponalist_web/blob/main/%E6%88%AA%E5%9B%BE/Snipaste_2025-08-10_09-48-30.png)
-4.双击index.html浏览器打开
-![image](https://github.com/nkfff55/oponalist_web/blob/main/%E6%88%AA%E5%9B%BE/Snipaste_2025-08-10_10-38-04.png)
-5.效果如图所示，可以暂停、随机下一个视频、全屏、音量调节
-![image](https://github.com/nkfff55/oponalist_web/blob/main/%E6%88%AA%E5%9B%BE/Snipaste_2025-08-10_09-50-30.png)
-**拓展**
-我主要是用这个看一些主播，所想到可以用小黄鸭补帧提高观赏效果,随便配置了一下，感觉帧率还是提升不少（4060）。
-![image](https://github.com/nkfff55/oponalist_web/blob/main/%E6%88%AA%E5%9B%BE/Snipaste_2025-08-10_09-52-22.png)
-移动端没有测试过奴知道效果。
+**无需复杂部署，直接浏览器打开即可刷播Alist中的视频资源！**  
+（支持PC端/移动端，含补帧优化方案）
+
+---
+
+## 🛠️ 快速开始
+1. **开启Alist游客访问权限**  
+   - 在Alist管理后台启用「允许游客访问」，确保无需登录即可浏览视频资源。  
+   ![示例截图](https://github.com/nkfff55/oponalist_web/blob/main/%E6%88%AA%E5%9B%BE/Snipaste_2025-08-10_09-45-58.png)
+
+2. **记录目标文件夹名称**  
+   - 在Alist文件列表中确认需挂载的文件夹名称（如`/测试`），后续需填入HTML配置。  
+   ![示例截图](https://github.com/nkfff55/oponalist_web/blob/main/%E6%88%AA%E5%9B%BE/Snipaste_2025-08-10_09-46-43.png)
+
+3. **修改HTML配置文件**  
+   - 编辑`index.html`，替换以下参数：  
+     - `Alist服务器地址`（如`http://192.168.1.1:5244`）  
+     - `文件目录`（与步骤2的文件夹名称一致） 
+   ![示例截图](https://github.com/nkfff55/oponalist_web/blob/main/%E6%88%AA%E5%9B%BE/Snipaste_2025-08-10_09-48-30.png)
+
+4. **浏览器直接运行**  
+   - 双击`index.html`即可启动，支持以下功能：  
+     - ⏯️ 暂停/播放  
+     - 🔀 随机切换视频  
+     - 🔉 音量调节  
+     - 🖥️ 全屏模式  
+   ![示例截图](https://github.com/nkfff55/oponalist_web/blob/main/%E6%88%AA%E5%9B%BE/Snipaste_2025-08-10_10-38-04.png)
+
+---
+
+## 🚀 进阶优化：补帧提升观感
+- **小黄鸭补帧配置**  
+   - 通过显卡（NVIDIA 4060）实现视频动态补帧，显著提升视频流畅度（需硬件支持） ，随意配置的。 
+   ![配置图](https://github.com/nkfff55/oponalist_web/blob/main/%E6%88%AA%E5%9B%BE/Snipaste_2025-08-10_09-52-22.png)
+
+- **移动端适配**  
+   - 当前未测试移动端，建议通过响应式布局优化（如CSS媒体查询）适配手机屏幕。
+
+---
+
+## 💡 技术原理
+- **基于Alist的协议**：直接读取挂载的网盘资源，无需下载即可流式播放。  
+- **轻量化前端**：纯HTML+JS实现，兼容主流浏览器，无额外依赖。  
+
+> 📌 **提示**：若需长期运行，建议将Alist部署至路由器或软路由，实现24小时在线访问。
