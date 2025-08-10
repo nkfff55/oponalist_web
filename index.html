@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>随机视频播放器(全屏兼容版)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background-color: #000;
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+        }
+        
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            z-index: 2;
+            transition: opacity 0.5s ease;
+        }
+        
+        /* 全屏模式下的控制栏样式 */
+        :-webkit-full-screen .controls {
+            position: fixed;
+            padding-bottom: 30px;
+        }
+        
+        :-moz-full-screen .controls {
+            position: fixed;
+            padding-bottom: 30px;
+        }
+        
+        :-ms-fullscreen .controls {
+            position: fixed;
+            padding-bottom: 30px;
+        }
+        
+        :fullscreen .controls {
+            position: fixed;
+            padding-bottom: 30px;
+        }
+        
+        .progress-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: #fe2c55;
+            width: 0%;
+        }
+        
+        .control-buttons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .control-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .video-info {
+            position: absolute;
+            bottom: 80px;
+            left: 20px;
+            max-width: 80%;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .volume-slider {
+            width: 80px;
+            height: 4px;
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        
+        .volume-slider:hover {
+            opacity: 1;
+        }
+        
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container">
+        <video id="videoPlayer" volume="0.1" autoplay muted playsinline></video>
+        <div class="video-info" id="videoInfo"></div>
+        <div class="controls">
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="control-buttons">
+                <button class="control-btn" id="playPauseBtn">⏸</button>
+                <button class="control-btn" id="nextVideoBtn">⏭</button>
+                <button class="control-btn" id="muteBtn">🔊</button>
+                <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.1" class="volume-slider">
+                <button class="control-btn" id="fullscreenBtn">⛶</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM元素
+        const videoPlayer = document.getElementById('videoPlayer');
+        const progressBar = document.getElementById('progressBar');
+        const progressContainer = document.getElementById('progressContainer');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const nextVideoBtn = document.getElementById('nextVideoBtn');
+        const videoInfo = document.getElementById('videoInfo');
+        const muteBtn = document.getElementById('muteBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        
+        // 全局变量
+        const ALIST_BASE_URL = 'http://127.0.0.1:5244'; // 替换为实际Alist地址
+        const VIDEO_DIRECTORY = '/本地'; // 替换为实际视频目录
+        let isDragging = false;
+        let currentVideoList = []; // 存储当前视频列表
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            initVolumeControls();
+            initFullscreenControls();
+            initRandomPlayback();
+            
+            // 基础事件监听
+            videoPlayer.addEventListener('timeupdate', updateProgress);
+            videoPlayer.addEventListener('ended', () => getRandomVideo(false));
+            
+            progressContainer.addEventListener('mousedown', startDrag);
+            progressContainer.addEventListener('mousemove', drag);
+            progressContainer.addEventListener('mouseup', endDrag);
+            
+            progressContainer.addEventListener('touchstart', startDrag);
+            progressContainer.addEventListener('touchmove', drag);
+            progressContainer.addEventListener('touchend', endDrag);
+            
+            playPauseBtn.addEventListener('click', togglePlayPause);
+            nextVideoBtn.addEventListener('click', () => getRandomVideo(true));
+            
+            // 初始加载随机视频
+            getRandomVideo(false);
+        });
+        
+        // 初始化音量控制
+        function initVolumeControls() {
+            const savedVolume = localStorage.getItem('videoVolume');
+            if (savedVolume !== null) {
+                videoPlayer.volume = savedVolume;
+                volumeSlider.value = savedVolume;
+            }
+            
+            volumeSlider.addEventListener('input', function() {
+                videoPlayer.volume = this.value;
+                videoPlayer.muted = false;
+                muteBtn.textContent = '🔊';
+                localStorage.setItem('videoVolume', this.value);
+            });
+            
+            muteBtn.addEventListener('click', function() {
+                videoPlayer.muted = !videoPlayer.muted;
+                muteBtn.textContent = videoPlayer.muted ? '🔇' : '🔊';
+                if (!videoPlayer.muted) {
+                    volumeSlider.value = videoPlayer.volume;
+                }
+            });
+        }
+        
+        // 初始化全屏控制
+        function initFullscreenControls() {
+            fullscreenBtn.addEventListener('click', toggleFullscreen);
+            
+            // 键盘快捷键 (F键切换全屏，ESC退出全屏)
+            document.addEventListener('keydown', function(e) {
+                if (e.target.tagName === 'INPUT') return;
+                
+                if (e.key === 'f' || e.key === 'F') {
+                    e.preventDefault();
+                    toggleFullscreen();
+                }
+            });
+            
+            // 监听全屏状态变化
+            document.addEventListener('fullscreenchange', updateFullscreenState);
+            document.addEventListener('webkitfullscreenchange', updateFullscreenState);
+            document.addEventListener('mozfullscreenchange', updateFullscreenState);
+            document.addEventListener('msfullscreenchange', updateFullscreenState);
+        }
+        
+        // 初始化随机播放功能
+        function initRandomPlayback() {
+            // 获取视频列表
+            fetchVideoList().then(videos => {
+                currentVideoList = videos;
+                if (videos.length > 0) {
+                    getRandomVideo(false);
+                }
+            });
+        }
+        
+        // 获取视频列表
+        async function fetchVideoList() {
+            try {
+                const response = await fetch(`${ALIST_BASE_URL}/api/fs/list`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ path: VIDEO_DIRECTORY })
+                });
+                
+                const data = await response.json();
+                
+                if (data.code === 200) {
+                    return data.data.content.filter(file => 
+                        file.name.match(/\.(mp4|avi|mov|mkv|webm|flv|wmv|mpg|mpeg)$/i));
+                } else {
+                    showError(data.message || '获取文件列表失败');
+                    return [];
+                }
+            } catch (error) {
+                showError('获取视频列表失败: ' + error.message);
+                return [];
+            }
+        }
+        
+        // 随机获取视频
+        async function getRandomVideo(userTriggered) {
+            try {
+                if (currentVideoList.length === 0) {
+                    currentVideoList = await fetchVideoList();
+                    if (currentVideoList.length === 0) {
+                        showError('未找到视频文件');
+                        return;
+                    }
+                }
+                
+                // 随机选择视频
+                const randomIndex = Math.floor(Math.random() * currentVideoList.length);
+                const currentVideo = currentVideoList[randomIndex];
+                
+                // 显示视频信息
+                videoInfo.textContent = currentVideo.name;
+                
+                // 获取视频直链
+                const path = `${VIDEO_DIRECTORY}/${currentVideo.name}`;
+                const videoUrl = await getSignedUrl(path);
+                
+                // 播放视频
+                videoPlayer.src = videoUrl;
+                videoPlayer.load();
+                
+                // 如果是用户触发的随机切换，则播放视频
+                if (userTriggered) {
+                    videoPlayer.play().catch(e => console.error('播放失败:', e));
+                } else {
+                    // 自动播放处理
+                    const playPromise = videoPlayer.play();
+                    
+                    if (playPromise !== undefined) {
+                        playPromise.catch(e => {
+                            console.log('自动播放被阻止，显示播放按钮');
+                            playPauseBtn.textContent = '▶';
+                        });
+                    }
+                }
+            } catch (error) {
+                showError('获取视频失败: ' + error.message);
+            }
+        }
+        
+        // 获取签名视频URL
+        async function getSignedUrl(path) {
+            try {
+                const response = await fetch(`${ALIST_BASE_URL}/api/fs/get`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ path })
+                });
+                
+                const data = await response.json();
+                
+                if (data.code === 200) {
+                    return data.data.raw_url;
+                } else {
+                    showError('获取视频链接失败');
+                    return '';
+                }
+            } catch (error) {
+                showError('获取签名失败: ' + error.message);
+                return '';
+            }
+        }
+        
+        // 切换全屏状态
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                enterFullscreen(videoPlayer);
+            } else {
+                exitFullscreen();
+            }
+        }
+        
+        // 进入全屏
+        function enterFullscreen(element) {
+            if (element.requestFullscreen) {
+                element.requestFullscreen();
+            } else if (element.mozRequestFullScreen) {
+                element.mozRequestFullScreen();
+            } else if (element.webkitRequestFullscreen) {
+                element.webkitRequestFullscreen();
+            } else if (element.msRequestFullscreen) {
+                element.msRequestFullscreen();
+            }
+        }
+        
+        // 退出全屏
+        function exitFullscreen() {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
+        
+        // 更新全屏状态
+        function updateFullscreenState() {
+            const isFullscreen = document.fullscreenElement || 
+                                document.webkitFullscreenElement || 
+                                document.mozFullScreenElement || 
+                                document.msFullscreenElement;
+            
+            fullscreenBtn.textContent = isFullscreen ? '⛶' : '⛶';
+            
+            // 全屏状态下确保控制栏可见
+            if (isFullscreen) {
+                document.querySelector('.controls').style.opacity = '1';
+            }
+        }
+        
+        // 播放/暂停切换
+        function togglePlayPause() {
+            if (videoPlayer.paused) {
+                videoPlayer.play();
+                playPauseBtn.textContent = '⏸';
+            } else {
+                videoPlayer.pause();
+                playPauseBtn.textContent = '▶';
+            }
+        }
+        
+        // 更新进度条
+        function updateProgress() {
+            if (isDragging) return;
+            const percent = (videoPlayer.currentTime / videoPlayer.duration) * 100;
+            progressBar.style.width = `${percent}%`;
+        }
+        
+        // 进度条拖动功能
+        function startDrag(e) {
+            isDragging = true;
+            videoPlayer.pause();
+            handleDrag(e);
+        }
+        
+        function drag(e) {
+            if (!isDragging) return;
+            handleDrag(e);
+        }
+        
+        function endDrag() {
+            if (!isDragging) return;
+            isDragging = false;
+            videoPlayer.play();
+        }
+        
+        function handleDrag(e) {
+            const rect = progressContainer.getBoundingClientRect();
+            const pos = (e.clientX || e.touches[0].clientX) - rect.left;
+            const percent = Math.min(Math.max(pos / rect.width, 0), 1);
+            progressBar.style.width = `${percent * 100}%`;
+            videoPlayer.currentTime = percent * videoPlayer.duration;
+        }
+        
+        // 显示错误
+        function showError(message) {
+            console.error(message);
+            videoInfo.textContent = message;
+        }
+    </script>
+</body>
+</html>
